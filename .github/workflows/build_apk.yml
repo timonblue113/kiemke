@@ -36,7 +36,13 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' $M
           sed -i 's#android:label="[^"]*"#android:label="Kiểm kho"#' $M
           grep -n "CAMERA\|label" $M
-
+       - name: Patch Gradle (minSdk 23 + NDK 27)
+        run: |
+          G=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
+          echo "Patching $G"
+          sed -i 's/minSdk *= *flutter.minSdkVersion/minSdk = 23/; s/minSdkVersion *flutter.minSdkVersion/minSdkVersion 23/' $G
+          sed -i 's/ndkVersion *= *flutter.ndkVersion/ndkVersion = "27.0.12077973"/; s/ndkVersion *flutter.ndkVersion/ndkVersion "27.0.12077973"/' $G
+          grep -n "minSdk\|ndkVersion" $G
       - run: flutter pub get
 
       - name: Build release APK
