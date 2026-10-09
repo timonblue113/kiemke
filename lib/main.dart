@@ -68,6 +68,8 @@ class App extends StatelessWidget {
         title: 'Kiểm kho',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
+        darkTheme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.dark),
+        themeMode: ThemeMode.system,
         home: const HomePage(),
       );
 }
@@ -173,6 +175,7 @@ class ItemsTab extends StatefulWidget {
 class _ItemsTabState extends State<ItemsTab> {
   String q = '';
   ItemStatus? filter;
+  String sort = 'file';
 
   static const _filters = <ItemStatus?, String>{
     null: 'Tất cả',
@@ -207,13 +210,46 @@ class _ItemsTabState extends State<ItemsTab> {
       return i.name.toLowerCase().contains(nq) || i.code.toLowerCase().contains(nq) || i.key.contains(normCode(nq));
     }).toList();
 
+    final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+    switch (sort) {
+      case 'code':
+        list.sort((a, b) => a.code.compareTo(b.code));
+        break;
+      case 'name':
+        list.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'diff':
+        list.sort((a, b) => b.diffValue.abs().compareTo(a.diffValue.abs()));
+        break;
+      case 'scan':
+        list.sort((a, b) => (b.lastScan ?? epoch).compareTo(a.lastScan ?? epoch));
+        break;
+    }
+
     return Column(children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-        child: TextField(
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm mã / tên vật tư', border: OutlineInputBorder(), isDense: true),
-          onChanged: (v) => setState(() => q = v),
-        ),
+        padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
+        child: Row(children: [
+          Expanded(
+            child: TextField(
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm mã / tên vật tư', border: OutlineInputBorder(), isDense: true),
+              onChanged: (v) => setState(() => q = v),
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Sắp xếp',
+            icon: const Icon(Icons.sort),
+            initialValue: sort,
+            onSelected: (v) => setState(() => sort = v),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'file', child: Text('Theo thứ tự file')),
+              PopupMenuItem(value: 'scan', child: Text('Mới quét gần nhất')),
+              PopupMenuItem(value: 'diff', child: Text('Chênh lệch giá trị lớn nhất')),
+              PopupMenuItem(value: 'code', child: Text('Theo mã')),
+              PopupMenuItem(value: 'name', child: Text('Theo tên')),
+            ],
+          ),
+        ]),
       ),
       SizedBox(
         height: 48,
@@ -257,5 +293,51 @@ class _ItemsTabState extends State<ItemsTab> {
         ),
       ),
     ]);
+  }
+}
+
+/// Chọn 1 mã vật tư trong danh sách (có tìm kiếm) - dùng để gán mã vạch lạ.
+Future<Item?> pickItem(BuildContext c) => showDialog<Item>(context: c, builder: (_) => const _PickDialog());
+
+class _PickDialog extends StatefulWidget {
+  const _PickDialog();
+  @override
+  State<_PickDialog> createState() => _PickDialogState();
+}
+
+class _PickDialogState extends State<_PickDialog> {
+  String q = '';
+  @override
+  Widget build(BuildContext context) {
+    final nq = q.trim().toLowerCase();
+    final nk = normCode(nq);
+    final list = inv.items.where((i) => nq.isEmpty || i.name.toLowerCase().contains(nq) || i.code.toLowerCase().contains(nq) || (nk.isNotEmpty && i.key.contains(nk))).take(60).toList();
+    return AlertDialog(
+      title: const Text('Chọn mã vật tư'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 420,
+        child: Column(children: [
+          TextField(
+            autofocus: true,
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm mã / tên', isDense: true, border: OutlineInputBorder()),
+            onChanged: (v) => setState(() => q = v),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView(children: [
+              for (final it in list)
+                ListTile(
+                  dense: true,
+                  title: Text(it.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text('${it.code} • Tồn ${fmtQty(it.sysQty)} ${it.unit}'),
+                  onTap: () => Navigator.pop(context, it),
+                ),
+            ]),
+          ),
+        ]),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy'))],
+    );
   }
 }

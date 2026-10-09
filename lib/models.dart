@@ -102,6 +102,7 @@ class Inventory extends ChangeNotifier {
   List<Item> items = [];
   final Map<String, Item> _index = {};
   final Map<String, double> extras = {}; // mã ngoài danh sách -> SL đếm được
+  final Map<String, String> aliases = {}; // mã vạch (chuẩn hóa) -> key mã vật tư
   String sourceName = '';
   DateTime? importedAt;
   final List<_Event> _log = [];
@@ -125,6 +126,9 @@ class Inventory extends ChangeNotifier {
       extras
         ..clear()
         ..addAll((j['extras'] as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())));
+      aliases
+        ..clear()
+        ..addAll(((j['aliases'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, v as String)));
       sourceName = j['sourceName'] ?? '';
       importedAt = j['importedAt'] == null ? null : DateTime.tryParse(j['importedAt']);
       _reindex();
@@ -139,6 +143,7 @@ class Inventory extends ChangeNotifier {
       await f.writeAsString(jsonEncode({
         'items': items.map((e) => e.toJson()).toList(),
         'extras': extras,
+        'aliases': aliases,
         'sourceName': sourceName,
         'importedAt': importedAt?.toIso8601String(),
       }));
@@ -184,6 +189,8 @@ class Inventory extends ChangeNotifier {
     if (b.isEmpty) return null;
     final exact = _index[b];
     if (exact != null) return exact;
+    final al = aliases[b];
+    if (al != null && _index[al] != null) return _index[al];
     if (b.length >= 8) {
       Item? best;
       for (final i in items) {
@@ -227,6 +234,20 @@ class Inventory extends ChangeNotifier {
         extras[e.code] = v;
       }
     }
+    _changed();
+  }
+
+  /// Gán mã vạch lạ cho 1 mã vật tư: các lần quét sau tự nhận, số đã quét được chuyển sang mã đó.
+  void assignAlias(String rawCode, Item it) {
+    final code = rawCode.trim();
+    aliases[normCode(code)] = it.key;
+    final q = extras.remove(code) ?? 0;
+    if (q > 0) {
+      it.counted += q;
+      it.touched = true;
+      it.lastScan = DateTime.now();
+    }
+    _log.removeWhere((e) => e.item == null && e.code == code);
     _changed();
   }
 

@@ -36,6 +36,7 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' $M
           sed -i 's#android:label="[^"]*"#android:label="Kiểm kho"#' $M
           grep -n "CAMERA\|label" $M
+
       - name: Patch Gradle (minSdk 23 + NDK 27)
         run: |
           G=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
@@ -43,6 +44,21 @@ jobs:
           sed -i 's/minSdk *= *flutter.minSdkVersion/minSdk = 23/; s/minSdkVersion *flutter.minSdkVersion/minSdkVersion 23/' $G
           sed -i 's/ndkVersion *= *flutter.ndkVersion/ndkVersion = "27.0.12077973"/; s/ndkVersion *flutter.ndkVersion/ndkVersion "27.0.12077973"/' $G
           grep -n "minSdk\|ndkVersion" $G
+
+      - name: Add Google Code Scanner (Kotlin + dependency)
+        run: |
+          F=$(find android/app/src/main -name MainActivity.kt | head -1)
+          echo "MainActivity: $F"
+          { grep -m1 '^package' "$F"; cat native/MainActivity.body.kt; } > /tmp/MainActivity.kt
+          cp /tmp/MainActivity.kt "$F"
+          G=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
+          if [[ "$G" == *.kts ]]; then
+            printf '\ndependencies {\n    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")\n}\n' >> "$G"
+          else
+            printf "\ndependencies {\n    implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'\n}\n" >> "$G"
+          fi
+          head -5 "$F"; tail -5 "$G"
+
       - run: flutter pub get
 
       - name: Build release APK

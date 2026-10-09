@@ -23,3 +23,11 @@ Dòng "Tổng cộng" bị bỏ qua; mã trùng được cộng dồn.
 
 ## Khớp mã vạch
 So khớp sau khi bỏ ký tự đặc biệt/viết hoa. Nếu mã vạch dài hơn mã vật tư (có tiền tố/hậu tố) vẫn nhận nếu chứa mã vật tư (≥ 8 ký tự). Mã không có trong danh sách được ghi vào "Hàng ngoài danh sách".
+
+## Màn hình quét
+- Camera quét liên tục (Google ML Kit), có **thanh zoom**, đèn pin, nhập mã tay.
+- Biểu tượng **G**: quét 1 mã bằng **Google Code Scanner** (màn hình quét của Google Play Services). Cầu nối Kotlin nằm ở `native/MainActivity.body.kt`, CI tự chèn vào project Android.
+- Quét đúng mã: "ting" + rung ngắn. Mã ngoài danh sách **hoặc vượt tồn lý thuyết**: 2 tiếng thấp + rung 2 nhịp. Nút loa để tắt/bật tiếng và rung.
+- Mã vạch trên tem khác mã vật tư: bấm **Gán mã vật tư**, chọn đúng hàng; số đã quét được chuyển sang mã đó và các lần quét sau tự nhận (lưu trong máy).
+- Màn hình luôn sáng khi đang quét. Giao diện sáng/tối theo hệ thống.
+- Danh sách kiểm kê: sắp xếp theo thứ tự file / mới quét / chênh lệch lớn nhất / mã / tên.
