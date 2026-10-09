@@ -31,3 +31,10 @@ So khớp sau khi bỏ ký tự đặc biệt/viết hoa. Nếu mã vạch dài 
 - Mã vạch trên tem khác mã vật tư: bấm **Gán mã vật tư**, chọn đúng hàng; số đã quét được chuyển sang mã đó và các lần quét sau tự nhận (lưu trong máy).
 - Màn hình luôn sáng khi đang quét. Giao diện sáng/tối theo hệ thống.
 - Danh sách kiểm kê: sắp xếp theo thứ tự file / mới quét / chênh lệch lớn nhất / mã / tên.
+
+## Xuất file & xem theo đơn vị tính
+- Nút chia sẻ (góc trên phải) có 3 lựa chọn:
+  - **Danh sách đã kiểm**: sheet "Đã kiểm" (kèm dòng tổng), "Chưa kiểm", "Ngoài danh sách".
+  - **Báo cáo đầy đủ**: Tổng quan, Theo ĐVT, Chi tiết, Top chênh lệch, Ngoài danh sách.
+  - **Báo cáo riêng 1 ĐVT**: như trên nhưng chỉ cho đơn vị tính đang chọn.
+- Biểu tượng phễu ở tab Kiểm kê và dãy nút ĐVT ở đầu tab Báo cáo dùng chung một bộ lọc. Bấm vào 1 dòng ở mục "Theo đơn vị tính" để xem riêng đơn vị đó. Khi đang lọc ĐVT, các mục xuất file cũng chỉ lấy ĐVT đó.

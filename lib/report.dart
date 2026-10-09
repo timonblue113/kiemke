@@ -41,6 +41,14 @@ String statusLabel(ItemStatus s) {
   }
 }
 
+/// Đơn vị tính đang lọc (null = tất cả). Dùng chung cho tab Kiểm kê, Báo cáo và xuất file.
+final unitFilter = ValueNotifier<String?>(null);
+
+List<String> unitList(Inventory inv) {
+  final set = <String>{for (final i in inv.items) unitKey(i.unit)};
+  return set.toList()..sort();
+}
+
 class UnitStat {
   int sku = 0;
   double sys = 0, sysVal = 0, counted = 0, countedVal = 0;
@@ -80,9 +88,10 @@ class Summary {
   double get diffQtyCountedOnly => overQty - shortQty;
   double get diffValCountedOnly => overVal - shortVal;
 
-  static Summary of(Inventory inv) {
+  static Summary of(Inventory inv, {String? unit}) {
     final s = Summary();
-    for (final it in inv.items) {
+    final scope = unit == null ? inv.items : inv.items.where((i) => unitKey(i.unit) == unit).toList();
+    for (final it in scope) {
       final u = s.byUnit.putIfAbsent(unitKey(it.unit), () => UnitStat());
       u.sku++;
       u.sys += it.sysQty;
@@ -124,9 +133,11 @@ class Summary {
           break;
       }
     }
-    s.extraSku = inv.extras.length;
-    s.extraQty = inv.extras.values.fold(0.0, (a, b) => a + b);
-    s.topDiff = inv.items.where((i) => i.diff != 0).toList()
+    if (unit == null) {
+      s.extraSku = inv.extras.length;
+      s.extraQty = inv.extras.values.fold(0.0, (a, b) => a + b);
+    }
+    s.topDiff = scope.where((i) => i.diff != 0).toList()
       ..sort((a, b) => b.diffValue.abs().compareTo(a.diffValue.abs()));
     return s;
   }

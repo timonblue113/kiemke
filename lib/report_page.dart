@@ -9,10 +9,37 @@ class ReportView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!inv.hasData) return const Center(child: Text('Chưa có dữ liệu. Hãy nhập file tồn trước.'));
-    final s = Summary.of(inv);
+    return ValueListenableBuilder<String?>(valueListenable: unitFilter, builder: (context, uf, _) => _body(context, uf));
+  }
+
+  Widget _body(BuildContext context, String? uf) {
+    final units = unitList(inv);
+    if (uf != null && !units.contains(uf)) uf = null;
+    final s = Summary.of(inv, unit: uf);
     final cs = Theme.of(context).colorScheme;
 
     return ListView(padding: const EdgeInsets.all(12), children: [
+      // ---------- chọn đơn vị tính ----------
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: ChoiceChip(label: const Text('Tất cả ĐVT'), selected: uf == null, onSelected: (_) => unitFilter.value = null),
+          ),
+          for (final u in units)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(label: Text(u), selected: uf == u, onSelected: (_) => unitFilter.value = u),
+            ),
+        ]),
+      ),
+      const SizedBox(height: 8),
+      if (uf != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text('Đang xem riêng đơn vị tính: $uf', style: TextStyle(fontWeight: FontWeight.bold, color: cs.primary)),
+        ),
       // ---------- tiến độ ----------
       _Card(title: 'Tiến độ kiểm', children: [
         LinearProgressIndicator(value: s.progress, minHeight: 10, borderRadius: BorderRadius.circular(6)),
@@ -56,21 +83,24 @@ class ReportView extends StatelessWidget {
       ]),
 
       // ---------- theo ĐVT ----------
-      _Card(title: 'Theo đơn vị tính', children: [
-        const Text('Không cộng gộp PC / BỘ / CÁI / CHAI… vì khác đơn vị.', style: TextStyle(fontSize: 12)),
-        const SizedBox(height: 6),
-        for (final e in s.byUnit.entries)
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text('${e.key}  (${e.value.sku} mã)'),
-            subtitle: Text('Tồn ${fmtQty(e.value.sys)} • Kiểm ${fmtQty(e.value.counted)} • Lệch ${fmtSigned(e.value.diff)}'),
-            children: [
-              _row('Giá trị tồn LT', fmtMoney(e.value.sysVal)),
-              _row('Giá trị đã kiểm', fmtMoney(e.value.countedVal)),
-              _row('Chênh lệch giá trị', fmtMoneySigned(e.value.diffVal)),
-            ],
-          ),
-      ]),
+      if (uf == null)
+        _Card(title: 'Theo đơn vị tính (bấm để xem riêng)', children: [
+          const Text('Không cộng gộp PC / BỘ / CÁI / CHAI… vì khác đơn vị.', style: TextStyle(fontSize: 12)),
+          for (final e in s.byUnit.entries)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text('${e.key}  (${e.value.sku} mã)', style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text('Tồn ${fmtQty(e.value.sys)} • Kiểm ${fmtQty(e.value.counted)} • Lệch ${fmtSigned(e.value.diff)}\nGT tồn ${fmtMoney(e.value.sysVal)} • GT kiểm ${fmtMoney(e.value.countedVal)}'),
+              isThreeLine: true,
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(fmtMoneySigned(e.value.diffVal),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: e.value.diffVal == 0 ? null : statusColor(e.value.diffVal < 0 ? ItemStatus.short : ItemStatus.over))),
+                const Icon(Icons.chevron_right),
+              ]),
+              onTap: () => unitFilter.value = e.key,
+            ),
+        ]),
 
       // ---------- top chênh lệch ----------
       _Card(title: 'Top 10 chênh lệch giá trị lớn nhất', children: [
@@ -86,7 +116,8 @@ class ReportView extends StatelessWidget {
       ]),
 
       // ---------- ngoài danh sách ----------
-      _Card(title: 'Hàng ngoài danh sách (${s.extraSku} mã • SL ${fmtQty(s.extraQty)})', children: [
+      if (uf == null)
+        _Card(title: 'Hàng ngoài danh sách (${s.extraSku} mã • SL ${fmtQty(s.extraQty)})', children: [
         if (inv.extras.isEmpty) const Text('Không có.'),
         for (final e in inv.extras.entries)
           ListTile(

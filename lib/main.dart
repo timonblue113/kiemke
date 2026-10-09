@@ -104,13 +104,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _export() async {
+  Future<void> _export(String kind) async {
     if (!inv.hasData) {
       toast(context, 'Chưa có dữ liệu');
       return;
     }
+    final u = unitFilter.value;
+    if (kind == 'checked' && !inv.hasAnyCount) {
+      toast(context, 'Chưa kiểm mã nào');
+      return;
+    }
     try {
-      await exportAndShare(inv);
+      if (kind == 'checked') {
+        await exportChecked(inv, unit: u);
+      } else if (kind == 'unit') {
+        await exportAndShare(inv, unit: u);
+      } else {
+        await exportAndShare(inv);
+      }
     } catch (e) {
       if (mounted) toast(context, 'Lỗi xuất file: $e');
     }
@@ -131,7 +142,19 @@ class _HomePageState extends State<HomePage> {
           title: Text(tab == 0 ? 'Kiểm kê' : 'Báo cáo'),
           actions: [
             IconButton(tooltip: 'Nhập file tồn', icon: const Icon(Icons.upload_file), onPressed: _import),
-            IconButton(tooltip: 'Xuất Excel', icon: const Icon(Icons.ios_share), onPressed: _export),
+            PopupMenuButton<String>(
+              tooltip: 'Xuất Excel',
+              icon: const Icon(Icons.ios_share),
+              onSelected: _export,
+              itemBuilder: (_) {
+                final u = unitFilter.value;
+                return [
+                  PopupMenuItem(value: 'checked', child: Text(u == null ? 'Danh sách đã kiểm' : 'Danh sách đã kiểm (ĐVT $u)')),
+                  const PopupMenuItem(value: 'full', child: Text('Báo cáo đầy đủ (tất cả ĐVT)')),
+                  PopupMenuItem(value: 'unit', enabled: u != null, child: Text(u == null ? 'Báo cáo riêng 1 ĐVT (chọn ĐVT trước)' : 'Báo cáo riêng ĐVT $u')),
+                ];
+              },
+            ),
             PopupMenuButton<String>(
               onSelected: (v) {
                 if (v == 'undo') inv.undoLast();
@@ -177,6 +200,22 @@ class _ItemsTabState extends State<ItemsTab> {
   ItemStatus? filter;
   String sort = 'file';
 
+  @override
+  void initState() {
+    super.initState();
+    unitFilter.addListener(_rebuild);
+  }
+
+  @override
+  void dispose() {
+    unitFilter.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+  }
+
   static const _filters = <ItemStatus?, String>{
     null: 'Tất cả',
     ItemStatus.notCounted: 'Chưa kiểm',
@@ -203,7 +242,9 @@ class _ItemsTabState extends State<ItemsTab> {
       );
     }
     final nq = q.trim().toLowerCase();
+    final uf = unitFilter.value;
     final list = inv.items.where((i) {
+      if (uf != null && unitKey(i.unit) != uf) return false;
       if (filter != null && i.status != filter) return false;
       if (filter == null && i.status == ItemStatus.noStock && nq.isEmpty) return false;
       if (nq.isEmpty) return true;
@@ -235,6 +276,15 @@ class _ItemsTabState extends State<ItemsTab> {
               decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm mã / tên vật tư', border: OutlineInputBorder(), isDense: true),
               onChanged: (v) => setState(() => q = v),
             ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Lọc theo đơn vị tính',
+            icon: Icon(uf == null ? Icons.filter_alt_outlined : Icons.filter_alt),
+            onSelected: (v) => unitFilter.value = v.isEmpty ? null : v,
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: '', child: Text('Tất cả ĐVT')),
+              for (final u in unitList(inv)) PopupMenuItem(value: u, child: Text(u)),
+            ],
           ),
           PopupMenuButton<String>(
             tooltip: 'Sắp xếp',
