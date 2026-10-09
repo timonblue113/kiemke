@@ -36,7 +36,7 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' $M
           sed -i 's#android:label="[^"]*"#android:label="Kiểm kho"#' $M
           grep -n "CAMERA\|label" $M
-       - name: Patch Gradle (minSdk 23 + NDK 27)
+      - name: Patch Gradle (minSdk 23 + NDK 27)
         run: |
           G=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
           echo "Patching $G"
